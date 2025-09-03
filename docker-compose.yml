@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:15
+    container_name: usdc_db
+    restart: no
+    environment:
+      POSTGRES_USER: usdc
+      POSTGRES_PASSWORD: usdc
+      POSTGRES_DB: usdc_indexer
+    ports:
+      - '5432:5432'
