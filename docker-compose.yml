@@ -1,23 +1,23 @@
 services:
-  db:
-    image: postgres:15
-    container_name: usdc_db
-    restart: no
-    environment:
-      POSTGRES_USER: usdc
-      POSTGRES_PASSWORD: usdc
-      POSTGRES_DB: usdc_indexer
-    ports:
-      - '5432:5432'
+    db:
+        image: postgres:15
+        container_name: usdc_db
+        restart: always
+        environment:
+            POSTGRES_USER: usdc
+            POSTGRES_PASSWORD: usdc
+            POSTGRES_DB: usdc_indexer
+        ports:
+            - "5432:5432"
 
-  app:
-    build: .
-    container_name: usdc_app
-    restart: no
-    image: usdc_app
-    ports:
-      - '3000:3000'
-    env_file:
-      - .env.docker
-    depends_on:
-      - db
+    app:
+        build: .
+        container_name: usdc_app
+        restart: always
+        image: usdc_app
+        ports:
+            - "3000:3000"
+        env_file:
+            - .env.docker
+        depends_on:
+            - db
