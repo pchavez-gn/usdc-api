@@ -128,7 +128,7 @@ export class TransfersController {
      * POST /transfers/transfer
      * Simulate a USDC transfer from a wallet private key (demo only, does NOT execute on-chain)
      */
-    /*
+    
     @Post('transfer')
     @ApiOperation({ summary: 'Simulate a USDC transfer (demo only, no real transaction)' })
     @ApiBody({
@@ -173,5 +173,5 @@ export class TransfersController {
             estimatedGas: estimatedGas.toString(),
         };
     }
-    */
+    
 }
