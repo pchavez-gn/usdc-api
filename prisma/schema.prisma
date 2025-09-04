@@ -19,6 +19,7 @@ model Transfer {
     txHash    String
     logIndex  Int
     block     Int
+    blockHash String
     from      String
     to        String
     amount    String

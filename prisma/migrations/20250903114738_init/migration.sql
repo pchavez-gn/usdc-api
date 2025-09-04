@@ -4,6 +4,7 @@ CREATE TABLE "public"."Transfer" (
     "txHash" TEXT NOT NULL,
     "logIndex" INTEGER NOT NULL,
     "block" INTEGER NOT NULL,
+    "blockHash" TEXT NOT NULL,
     "from" TEXT NOT NULL,
     "to" TEXT NOT NULL,
     "amount" TEXT NOT NULL,
