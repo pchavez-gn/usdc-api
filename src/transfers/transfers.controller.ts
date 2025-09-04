@@ -39,35 +39,41 @@ export class TransfersController {
      */
     @Get()
     @ApiOperation({ summary: 'Fetch recent USDC transfers' })
-    @ApiQuery({
-        name: 'from',
-        required: false,
-        description: 'Filter by sender address (optional)',
-    })
-    @ApiQuery({
-        name: 'to',
-        required: false,
-        description: 'Filter by recipient address (optional)',
-    })
-    @ApiQuery({
-        name: 'limit',
-        required: false,
-        description: 'Maximum number of transfers to return',
-        example: 20,
-    })
+    @ApiQuery({ name: 'from', required: false, description: 'Filter by sender address (optional)' })
+    @ApiQuery({ name: 'to', required: false, description: 'Filter by recipient address (optional)' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Maximum number of transfers to return', example: 20 })
     async getTransfers(
         @Query('from') from?: string,
         @Query('to') to?: string,
         @Query('limit') limit = '20',
     ) {
-        const transfers = await this.prisma.transfer.findMany({
-            where: {
-                ...(from ? { from } : {}),
-                ...(to ? { to } : {}),
-            },
-            orderBy: { block: 'desc' },
-            take: parseInt(limit),
-        });
+        // Retry helper with exponential backoff
+        const retryWithBackoff = async <T>(
+            fn: () => Promise<T>,
+            retries = 5,
+            delay = 1000, // initial delay in ms
+        ): Promise<T> => {
+            try {
+                return await fn();
+            } catch (err) {
+                if (retries === 0) throw err;
+                const backoff = delay * 2; // exponential increase
+                console.warn(`Retrying in ${backoff}ms... (${retries} retries left)`);
+                await new Promise((res) => setTimeout(res, backoff));
+                return retryWithBackoff(fn, retries - 1, backoff);
+            }
+        };
+
+        const transfers = await retryWithBackoff(() =>
+            this.prisma.transfer.findMany({
+                where: {
+                    ...(from ? { from } : {}),
+                    ...(to ? { to } : {}),
+                },
+                orderBy: { block: 'desc' },
+                take: parseInt(limit),
+            }),
+        );
 
         return transfers.map((t) => ({
             ...t,
