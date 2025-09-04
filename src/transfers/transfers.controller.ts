@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
     ApiQuery,
@@ -27,7 +27,7 @@ export class TransfersController {
 
         this.usdc = new ethers.Contract(
             this.config.get<string>('USDC_CONTRACT') ??
-                '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
             usdcAbi,
             this.provider,
         );
@@ -128,7 +128,7 @@ export class TransfersController {
      * POST /transfers/transfer
      * Simulate a USDC transfer from a wallet private key (demo only, does NOT execute on-chain)
      */
-    
+
     @Post('transfer')
     @ApiOperation({ summary: 'Simulate a USDC transfer (demo only, no real transaction)' })
     @ApiBody({
@@ -144,34 +144,59 @@ export class TransfersController {
             required: ['fromPk', 'to', 'amount'],
         },
     })
-
     async simulateTransferDemo(@Body() body: { fromPk: string; to: string; amount: string }) {
-        // Create wallet locally (does not broadcast any transaction)
-        const wallet = new ethers.Wallet(body.fromPk);
+        try {
+            // Create wallet locally (does not broadcast any transaction)
+            const wallet = new ethers.Wallet(body.fromPk);
 
-        // Prepare a transaction object (but do not send it)
-        const unsignedTx = await this.usdc.populateTransaction['transfer'](
-            body.to,
-            ethers.parseUnits(body.amount, 6)
-        );
+            // Prepare a transaction object (but do not send it)
+            const unsignedTx = await this.usdc.transfer.populateTransaction(
+                body.to,
+                ethers.parseUnits(body.amount, 6),
+            );
 
-        // Fill in basic details
-        unsignedTx.from = wallet.address;
+            // Fill in basic details
+            unsignedTx.from = wallet.address;
 
-        // Simulate gas estimation (optional)
-        const estimatedGas = await this.provider.estimateGas({
-            ...unsignedTx,
-            from: wallet.address,
-        });
+            let estimatedGas: string | null = null;
 
-        return {
-            message: 'This is a simulated transfer. No funds were moved on-chain.',
-            from: wallet.address,
-            to: body.to,
-            amount: body.amount,
-            txData: unsignedTx,
-            estimatedGas: estimatedGas.toString(),
-        };
+            try {
+                const gas = await this.provider.estimateGas({
+                    ...unsignedTx,
+                    from: wallet.address,
+                });
+                estimatedGas = gas.toString();
+            } catch (err: any) {
+                // Gas estimation failed (likely due to insufficient balance or allowance)
+                return {
+                    success: false,
+                    message: err.reason ?? 'Gas estimation failed',
+                    from: wallet.address,
+                    to: body.to,
+                    amount: body.amount,
+                    txData: unsignedTx,
+                    error: err.shortMessage ?? err.message,
+                };
+            }
+
+            return {
+                success: true,
+                message: 'This is a simulated transfer. No funds were moved on-chain.',
+                from: wallet.address,
+                to: body.to,
+                amount: body.amount,
+                txData: unsignedTx,
+                estimatedGas,
+            };
+        } catch (err: any) {
+            throw new HttpException(
+                {
+                    success: false,
+                    message: 'Simulation failed',
+                    error: err.message,
+                },
+                HttpStatus.BAD_REQUEST,
+            );
+        }
     }
-    
 }
