@@ -68,6 +68,25 @@ export class IndexerService implements OnModuleInit {
         let toBlock = latestBlock;
         let fromBlock = Math.max(lastIndexed, toBlock - CHUNK_SIZE + 1)
 
+        // Exponential backoff helper
+        const fetchWithRetry = async <T>(
+            fn: () => Promise<T>,
+            retries = 5,
+            delay = 1000 // initial delay in ms
+        ): Promise<T> => {
+            try {
+                return await fn();
+            } catch (err) {
+                if (retries === 0) throw err;
+                const backoff = delay * 2;
+                const jitter = Math.random() * 300; // add small random jitter
+                const waitTime = backoff + jitter;
+                this.logger.warn(`Retrying in ${waitTime.toFixed(0)}ms... (${retries} retries left)`);
+                await new Promise((res) => setTimeout(res, waitTime));
+                return fetchWithRetry(fn, retries - 1, backoff);
+            }
+        };
+        
         while (transferCount < MAX_INDEXER_SIZE && fromBlock <= toBlock) {
             this.logger.log(`fetching from block ${fromBlock} to ${toBlock}`)
 
@@ -79,7 +98,7 @@ export class IndexerService implements OnModuleInit {
             };
 
             try {
-                const logs = await this.provider.getLogs(filter);
+                const logs = await fetchWithRetry(() => this.provider.getLogs(filter));
                 await sleep(300);
                 const blockCache = new Map<number, Date>();
 
