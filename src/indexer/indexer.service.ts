@@ -61,7 +61,7 @@ export class IndexerService implements OnModuleInit {
 
         const chainBlock = await this.provider.getBlock(last.block);
         if (!chainBlock || chainBlock.hash !== last.blockHash) {
-            this.logger.warn(`⚠️ Reorg detected at block ${last.block}, rolling back...`);
+            this.logger.warn(`Reorg detected at block ${last.block}, rolling back...`);
             await this.prisma.transfer.deleteMany({
                 where: { block: { gte: last.block } },
             });
