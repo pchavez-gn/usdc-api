@@ -1,7 +1,6 @@
 # **USDC Indexer & API**
 
-This project provides an API for querying **USDC token transfers** on the Ethereum blockchain.  
-It includes an indexing service that listens for `Transfer` events and exposes the data through a set of RESTful endpoints.
+This project is an API that tracks recent **USDC token transfers** on the Ethereum mainnet. It uses a Dockerized setup with two services: `usdc_db` and `usdc_app`. The `usdc_db` service is a PostgreSQL database that stores the transfer data, while the `usdc_app` service is the backend application. When the application starts, it automatically fetches the latest 1000 transfers and saves them to the database. It then exposes API endpoints that allow users to query this data, providing a convenient way to access and analyze recent transfer history.
 
 ---
 
@@ -92,10 +91,8 @@ Before you begin, make sure you have the following installed:
 
 ## **3. Fault Tolerance & Data Integrity**
 
-- **Automatic Recovery**  
-  The indexer always resumes from the latest known block, ensuring that interruptions never create gaps in the data.  
+- The indexer service starts retrieving from the most recent block backward. It retrieves blocks in chunks until one of two conditions is met: either it has found and processed at least 1000 transfer events, or it encounters a block that has already been indexed in the database. After fetching the new transfers, it removes the oldest ones from the database, keeping only the latest 1000 transfers, ensuring that interruptions never create gaps in the data.  
 
-- **Data Integrity First**  
-  New records are written and confirmed before older ones are pruned, keeping the database consistent while respecting the configured index size.  
+- New records are written before older ones are pruned, keeping the database consistent while respecting the configured index size.  
 
 ---
